@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Price Tracker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #080a0f;
+    --surface:   #0e1117;
+    --surface2:  #141820;
+    --border:    rgba(255,255,255,0.07);
+    --border2:   rgba(255,255,255,0.12);
+    --text:      #e8eaf0;
+    --muted:     #5a6070;
+    --muted2:    #8a909e;
+    --accent:    #4ade80;
+    --accent-d:  #16a34a;
+    --red:       #f87171;
+    --amber:     #fbbf24;
+    --blue:      #60a5fa;
+    --mono:      'DM Mono', monospace;
+    --sans:      'Syne', sans-serif;
+  }
+
+  html { background: var(--bg); color: var(--text); font-family: var(--sans); }
+
+  body {
+    min-height: 100vh;
+    background:
+      radial-gradient(ellipse 80% 50% at 10% 0%, rgba(74,222,128,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 90% 100%, rgba(96,165,250,0.04) 0%, transparent 60%),
+      var(--bg);
+  }
+
+  /* ── Header ── */
+  header {
+    padding: 2.5rem 3rem 1.5rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .logo-label {
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+  .logo-title {
+    font-size: 1.6rem;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .logo-title span { color: var(--accent); }
+  .header-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    text-align: right;
+    line-height: 1.8;
+  }
+  .live-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-right: 6px;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; }
+    50%      { opacity: 0.3; }
+  }
+
+  /* ── Main grid ── */
+  main {
+    padding: 2.5rem 3rem;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 6rem 2rem;
+    color: var(--muted);
+  }
+  .empty-state h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--muted2);
+    margin-bottom: .5rem;
+  }
+  .empty-state p { font-size: .85rem; font-family: var(--mono); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 1.25rem;
+  }
+
+  /* ── Product card ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: border-color .2s, transform .2s;
+    position: relative;
+  }
+  .card:hover {
+    border-color: var(--border2);
+    transform: translateY(-2px);
+  }
+  .card.dropped { border-color: rgba(74,222,128,0.3); }
+  .card.dropped::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(74,222,128,0.04) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .card-header {
+    padding: 1.25rem 1.4rem 0;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .product-name {
+    font-size: .9rem;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1.35;
+    flex: 1;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .badge {
+    flex-shrink: 0;
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 20px;
+    letter-spacing: 0.06em;
+  }
+  .badge-drop  { background: rgba(74,222,128,0.12); color: var(--accent); border: 1px solid rgba(74,222,128,0.2); }
+  .badge-same  { background: rgba(90,96,112,0.15);  color: var(--muted2); border: 1px solid var(--border); }
+  .badge-new   { background: rgba(96,165,250,0.12); color: var(--blue);   border: 1px solid rgba(96,165,250,0.2); }
+
+  /* ── Prices ── */
+  .prices {
+    padding: 1.25rem 1.4rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: .5rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .price-cell { display: flex; flex-direction: column; gap: 3px; }
+  .price-label {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .price-value {
+    font-family: var(--mono);
+    font-size: 1.15rem;
+    font-weight: 500;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+  .price-value.current { color: var(--accent); }
+  .price-value.lowest  { color: var(--amber); }
+  .price-value.na      { color: var(--muted); font-size: .85rem; }
+
+  /* ── Sparkline ── */
+  .sparkline-wrap {
+    padding: 1rem 1.4rem 1.25rem;
+  }
+  .sparkline-label {
+    font-family: var(--mono);
+    font-size: 9.5px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: .5rem;
+  }
+  canvas.sparkline {
+    width: 100%;
+    height: 44px;
+    display: block;
+  }
+
+  /* ── Card footer ── */
+  .card-footer {
+    padding: .75rem 1.4rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .card-footer a {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--blue);
+    text-decoration: none;
+    letter-spacing: 0.05em;
+    opacity: .8;
+    transition: opacity .15s;
+  }
+  .card-footer a:hover { opacity: 1; }
+  .card-footer .checked-at {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  /* ── Footer ── */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 1.5rem 3rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  footer p { font-size: .75rem; color: var(--muted); font-family: var(--mono); }
+  footer a { color: var(--muted2); text-decoration: none; }
+  footer a:hover { color: var(--text); }
+
+  @media (max-width: 640px) {
+    header, main, footer { padding-left: 1.25rem; padding-right: 1.25rem; }
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <span class="logo-label">Dashboard</span>
+    <h1 class="logo-title">Price<span>Watch</span></h1>
+  </div>
+  <div class="header-meta">
+    <div><span class="live-dot"></span>Live tracking</div>
+    <div>Updated {{ now }}</div>
+    <div>{{ products|length }} product{% if products|length != 1 %}s{% endif %} tracked</div>
+  </div>
+</header>
+
+<main>
+  {% if not products %}
+  <div class="empty-state">
+    <h2>No products yet</h2>
+    <p>Add products in the admin panel to start tracking.</p>
+  </div>
+  {% else %}
+  <div class="grid">
+    {% for p in products %}
+    {% set has_drop = p.current_price and p.baseline_price and p.current_price < p.baseline_price %}
+    {% set is_new   = p.baseline_price is none %}
+    <div class="card {% if has_drop %}dropped{% endif %}" data-history="{{ p.history | tojson | e }}">
+      <div class="card-header">
+        <div class="product-name">{{ p.name or p.asin or 'Product' }}</div>
+        {% if is_new %}
+          <span class="badge badge-new">NEW</span>
+        {% elif has_drop %}
+          <span class="badge badge-drop">↓ DROP</span>
+        {% else %}
+          <span class="badge badge-same">STABLE</span>
+        {% endif %}
+      </div>
+
+      <div class="prices">
+        <div class="price-cell">
+          <span class="price-label">Current</span>
+          {% if p.current_price %}
+            <span class="price-value current">₹{{ '{:,.0f}'.format(p.current_price) }}</span>
+          {% else %}
+            <span class="price-value na">—</span>
+          {% endif %}
+        </div>
+        <div class="price-cell">
+          <span class="price-label">Baseline</span>
+          {% if p.baseline_price %}
+            <span class="price-value">₹{{ '{:,.0f}'.format(p.baseline_price) }}</span>
+          {% else %}
+            <span class="price-value na">—</span>
+          {% endif %}
+        </div>
+        <div class="price-cell">
+          <span class="price-label">Lowest</span>
+          {% if p.lowest_price %}
+            <span class="price-value lowest">₹{{ '{:,.0f}'.format(p.lowest_price) }}</span>
+          {% else %}
+            <span class="price-value na">—</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="sparkline-wrap">
+        <div class="sparkline-label">24h price history</div>
+        <canvas class="sparkline" height="44"></canvas>
+      </div>
+
+      <div class="card-footer">
+        <a href="{{ p.url }}" target="_blank" rel="noopener">View on Amazon ↗</a>
+        {% if p.history %}
+          <span class="checked-at">
+            {{ p.history[-1].checked_at[:16].replace('T',' ') }} UTC
+          </span>
+        {% endif %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</main>
+
+<footer>
+  <p>Checks every hour via ScraperAPI · Alerts via Twilio WhatsApp</p>
+  <p><a href="/admin">Admin ↗</a></p>
+</footer>
+
+<script>
+document.querySelectorAll('.card').forEach(card => {
+  const raw     = card.dataset.history;
+  const canvas  = card.querySelector('canvas.sparkline');
+  if (!raw || !canvas) return;
+
+  let history;
+  try { history = JSON.parse(raw); } catch { return; }
+  if (!history.length) return;
+
+  const prices = history.map(h => parseFloat(h.price));
+  const min    = Math.min(...prices);
+  const max    = Math.max(...prices);
+  const range  = max - min || 1;
+  const dpr    = window.devicePixelRatio || 1;
+  const W      = canvas.offsetWidth  || 300;
+  const H      = 44;
+
+  canvas.width  = W * dpr;
+  canvas.height = H * dpr;
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const pad = 4;
+  const pts = prices.map((p, i) => ({
+    x: pad + (i / Math.max(prices.length - 1, 1)) * (W - pad * 2),
+    y: pad + (1 - (p - min) / range) * (H - pad * 2),
+  }));
+
+  // Fill gradient
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  const isDropped = card.classList.contains('dropped');
+  grad.addColorStop(0,   isDropped ? 'rgba(74,222,128,0.18)' : 'rgba(96,165,250,0.12)');
+  grad.addColorStop(1,   'rgba(0,0,0,0)');
+
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, H);
+  pts.forEach(pt => ctx.lineTo(pt.x, pt.y));
+  ctx.lineTo(pts[pts.length - 1].x, H);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) {
+    const cp = { x: (pts[i-1].x + pts[i].x) / 2, y: (pts[i-1].y + pts[i].y) / 2 };
+    ctx.quadraticCurveTo(pts[i-1].x, pts[i-1].y, cp.x, cp.y);
+  }
+  ctx.lineTo(pts[pts.length-1].x, pts[pts.length-1].y);
+  ctx.strokeStyle = isDropped ? '#4ade80' : '#60a5fa';
+  ctx.lineWidth   = 1.5;
+  ctx.lineJoin    = 'round';
+  ctx.stroke();
+
+  // Dot at latest price
+  const last = pts[pts.length - 1];
+  ctx.beginPath();
+  ctx.arc(last.x, last.y, 3, 0, Math.PI * 2);
+  ctx.fillStyle = isDropped ? '#4ade80' : '#60a5fa';
+  ctx.fill();
+});
+
+// Auto-refresh every 5 minutes
+setTimeout(() => location.reload(), 5 * 60 * 1000);
+</script>
+</body>
+</html>

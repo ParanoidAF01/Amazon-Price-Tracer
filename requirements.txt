@@ -1,5 +1,10 @@
-requests
-beautifulsoup4
-lxml
-twilio
-schedule
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+jinja2==3.1.4
+python-multipart==0.0.9
+supabase==2.5.0
+requests==2.32.3
+beautifulsoup4==4.12.3
+lxml==5.2.2
+twilio==9.1.0
+schedule==1.2.2
